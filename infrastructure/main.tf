@@ -43,7 +43,6 @@ module "security" {
   source      = "./modules/security"
   vpc_id      = module.vpc.vpc_id
   environment = var.environment
-  bastion_sg_id   = module.bastion.bastion_sg_id
 }
 #---asg---
 module "asg" {

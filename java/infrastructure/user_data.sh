@@ -1,56 +1,20 @@
 #!/bin/bash
 set -e
 
-# --- packages ---
 yum update -y
 amazon-linux-extras install -y nginx1 || yum install -y nginx
-yum install -y python3
+yum install -y java-17-amazon-corretto
+yum install -y aws-cli
 
-# --- simple python backend (port 8080) ---
-mkdir -p /opt/backend
+mkdir -p /opt/app
+cd /opt/app
 
-cat >/opt/backend/app.py <<'PY'
-from http.server import BaseHTTPRequestHandler, HTTPServer
+aws s3 cp s3://yunus-java-login-app-bucket/app.jar app.jar
 
-class Handler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        if self.path in ["/health", "/health/"]:
-            self.send_response(200)
-            self.send_header("Content-Type", "text/plain")
-            self.end_headers()
-            self.wfile.write(b"ok\n")
-            return
-        if self.path in ["/", "/app", "/app/"]:
-            self.send_response(200)
-            self.send_header("Content-Type", "text/plain")
-            self.end_headers()
-            self.wfile.write(b"backend ok\n")
-            return
+nohup java -jar app.jar > app.log 2>&1 &
 
-        self.send_response(404)
-        self.end_headers()
+sleep 10
 
-HTTPServer(("0.0.0.0", 8080), Handler).serve_forever()
-PY
-
-cat >/etc/systemd/system/backend.service <<'SERVICE'
-[Unit]
-Description=Simple Python Backend
-After=network.target
-
-[Service]
-ExecStart=/usr/bin/python3 /opt/backend/app.py
-Restart=always
-User=root
-
-[Install]
-WantedBy=multi-user.target
-SERVICE
-
-systemctl daemon-reload
-systemctl enable --now backend
-
-# --- nginx: serve / and /health, proxy /app/ to backend ---
 cat >/etc/nginx/conf.d/app.conf <<'NGINX'
 server {
     listen 80 default_server;

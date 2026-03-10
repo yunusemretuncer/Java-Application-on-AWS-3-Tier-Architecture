@@ -12,7 +12,7 @@ override.tf.json
 # Terraform variables (real secrets)
 terraform.tfvars
 *.auto.tfvars
-infrastructure/
+
 # AWS / SSH
 *.pem
 *.key
